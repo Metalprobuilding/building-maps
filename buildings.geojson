@@ -1,1 +1,16 @@
-{"type":"FeatureCollection","features":[{"type":"Feature","properties":{"type":"Cold_Formed","city":"Barrie Island","province":"ON","seaCan":""},"geometry":{"type":"Point","coordinates":[-82.4711039,45.8960382]}}]}
+{
+  "type":"FeatureCollection",
+  "features":[
+    {
+      "type":"Feature",
+      "properties":{
+        "type":"Cold_Formed",
+        "city":"Barrie Island",
+        "province":"ON",
+        "description":"E25x40x18 20GA",
+        "seaCan":""
+      },
+      "geometry":{"type":"Point","coordinates":[-82.4711039,45.8960382]}
+    }
+  ]
+}
