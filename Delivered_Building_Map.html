@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Delivered Buildings Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    html, body, #map {
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+    }
+  </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+
+  // Center near your data
+  const map = L.map('map').setView([45.9, -82.47], 7);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  // Custom icons
+  const icons = {
+  quonset_no_seacan:      L.icon({ iconUrl: 'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/quonset_no_seacan.jpg', iconSize: [32,32] }),
+  quonset_seacan:         L.icon({ iconUrl: 'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/quonset_seacan.jpg', iconSize: [32,32] }),
+  coldformed_no_seacan:   L.icon({ iconUrl: 'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/coldformed_no_seacan.jpg', iconSize: [32,32] }),
+  coldformed_seacan:      L.icon({ iconUrl: 'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/coldformed_seacan.png', iconSize: [32,32] }),
+  ibeam_no_seacan:        L.icon({ iconUrl: 'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/ibeam_no_seacan.jpg', iconSize: [32,32] }),
+  ibeam_seacan:           L.icon({ iconUrl: 'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/ibeam_seacan.png', iconSize: [32,32] }),
+  default:                L.icon({ iconUrl: 'https://unpkg.com/leaflet/dist/images/marker-icon.png', iconSize: [32,32] })
+};
+
+
+
+  function pickIcon(buildingType, seaCanValue) {
+    const t = (buildingType || "")
+                .toLowerCase()
+                .replace(/[\s\-]+/g, "_");
+    const sea = (seaCanValue || "").trim().toLowerCase() === "yes"
+                ? "seacan" : "no_seacan";
+    const key = `${t}_${sea}`;
+    return icons[key] || icons.default;
+  }
+
+  // ✅ Correct URL — no extra text inside quotes
+  const geojsonURL = "https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/buildings.geojson";
+
+  fetch(geojsonURL)
+    .then(res => res.json())
+    .then(data => {
+      data.features.forEach(f => {
+        const props = f.properties;
+        const coords = f.geometry.coordinates;
+
+        const descText = props.description ? props.description : "(no description)";
+        const seaText  = props.seaCan    ? props.seaCan : "No";
+
+        L.marker([coords[1], coords[0]], {
+          icon: pickIcon(props.type, props.seaCan)
+        })
+        .bindPopup(`
+          <b>${props.city}, ${props.province}</b><br>
+          ${descText}<br>
+          SeaCan: ${seaText}
+        `)
+        .addTo(map);
+      });
+    })
+    .catch(err => console.error("Error loading GeoJSON:", err));
+
+</script>
+
+</body>
+</html>
