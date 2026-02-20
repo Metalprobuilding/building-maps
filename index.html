@@ -20,7 +20,6 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
 
-  // Initialize map near your data
   const map = L.map('map').setView([45.9, -82.47], 7);
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -54,24 +53,41 @@
       data.features.forEach(f => {
         const props = f.properties;
         const coords = f.geometry.coordinates;
-
-        // Array of buildings at this location
         const buildings = props.buildings || [];
 
-        // choose SeaCan == Yes first if present
-let chosenBuilding = buildings[0];
+        // Choose the building to represent the icon
+        let chosenBuilding = null;
 
-for (let b of buildings) {
-  if ((b.seaCan || "").trim().toLowerCase() === "yes") {
-    chosenBuilding = b;
-    break;
-  }
-}
+        // 1) If any building has SeaCan = yes, pick it
+        for (let b of buildings) {
+          if ((b.seaCan || "").trim().toLowerCase() === "yes") {
+            chosenBuilding = b;
+            break;
+          }
+        }
 
-let chosenIcon = pickIcon(chosenBuilding.type, chosenBuilding.seaCan);
+        // 2) If no SeaCan, pick by priority order
+        if (!chosenBuilding && buildings.length > 0) {
+          const priority = ["Quonset", "I_Beam", "Cold_Formed"];
+          for (let type of priority) {
+            const found = buildings.find(b => b.type === type);
+            if (found) {
+              chosenBuilding = found;
+              break;
+            }
+          }
+          // fallback to first building if none match priority
+          if (!chosenBuilding) {
+            chosenBuilding = buildings[0];
+          }
+        }
+
+        const markerIcon = chosenBuilding
+          ? pickIcon(chosenBuilding.type, chosenBuilding.seaCan)
+          : icons.default;
 
         const marker = L.marker([coords[1], coords[0]], {
-          icon: chosenIcon
+          icon: markerIcon
         }).addTo(map);
 
         // Build popup text
@@ -95,4 +111,3 @@ let chosenIcon = pickIcon(chosenBuilding.type, chosenBuilding.seaCan);
 
 </body>
 </html>
-
