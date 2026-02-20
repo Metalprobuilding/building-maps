@@ -14,88 +14,86 @@
       font-family: Arial, sans-serif;
     }
 
-    #map { 
+    #map {
       position: absolute;
       left: 0;
-      top: 130px;
-      bottom: 40px;
+      top: 0;
+      bottom: 0;
       width: 70%;
     }
 
-    #resultsPanel {
+    #sidebar {
       position: absolute;
       top: 0;
       right: 0;
       width: 30%;
-      height: 100%;
-      background: #ffffff;
+      bottom: 0;
       overflow-y: auto;
+      background: white;
+      padding: 14px;
       border-left: 1px solid #ccc;
-      padding: 12px;
     }
 
-    #resultsPanel h1 {
+    #sidebar h1 {
       font-size: 22px;
-      margin: 4px 0 2px;
+      margin: 0 0 4px;
     }
-
-    #resultsPanel h2 {
+    #sidebar h2 {
       font-size: 16px;
-      margin: 0 0 8px;
+      margin: 0 0 12px;
       color: #333;
-      font-weight: normal;
     }
 
-    #resultsPanel h3 {
-      margin-top: 10px;
+    #sidebar h3 {
       font-size: 18px;
-      font-weight: bold;
+      margin-top: 14px;
       border-bottom: 1px solid #ddd;
       padding-bottom: 4px;
     }
 
     .searchSection input, .searchSection button,
     .filterSection button {
-      margin-right: 5px;
-      margin-bottom: 6px;
       padding: 6px 8px;
+      margin-right: 6px;
+      margin-bottom: 6px;
       font-size: 14px;
       cursor: pointer;
     }
 
     .filterSection button.selected {
       background: #007bff;
-      color: #fff;
+      color: white;
     }
 
     .disclaimer {
-      font-size: 13px;
-      color: #444;
-      margin: 6px 0 10px;
       background: #f8f8f8;
-      padding: 8px;
       border-left: 4px solid #007bff;
+      padding: 8px;
+      font-size: 13px;
+      margin-bottom: 10px;
     }
 
     .buildingItem {
       margin-bottom: 12px;
-      border-bottom: 1px solid #ddd;
+      border-bottom: 1px solid #ccc;
       padding-bottom: 8px;
     }
 
     .footer {
-      margin-top: 20px;
       font-size: 12px;
       color: #555;
       border-top: 1px solid #ccc;
       padding-top: 10px;
+      margin-top: 20px;
     }
   </style>
+
 </head>
 <body>
 
-<div id="resultsPanel">
+<div id="map"></div>
 
+<div id="sidebar">
   <h1>METAL PRO BUILDINGS</h1>
   <h2>Delivered Building Tool – Search or Click on Map</h2>
 
@@ -103,6 +101,7 @@
     <input id="cityInput" type="text" placeholder="City" style="width: 120px;" />
     <input id="provInput" type="text" placeholder="Province/State" style="width: 80px;" />
     <button id="searchBtn">Search</button>
+    <button id="resetBtn">Reset</button>
   </div>
 
   <div class="filterSection">
@@ -126,176 +125,140 @@
     Engineered by Metal Pro Buildings Inc.<br>
     © METAL PRO® is a registered trademark of Metal Pro Buildings Inc.
   </div>
-
 </div>
-
-<div id="map"></div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
 
-  const map = L.map('map').setView([45.9, -82.47], 7);
+const map = L.map('map').setView([45.9, -82.47], 7);
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
-  }).addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
 
-  const icons = {
-    quonset_no_seacan:      L.icon({ iconUrl: 'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/quonset_no_seacan.jpg', iconSize: [32,32] }),
-    quonset_seacan:         L.icon({ iconUrl: 'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/quonset_seacan.jpg', iconSize: [32,32] }),
-    cold_formed_no_seacan:  L.icon({ iconUrl: 'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/coldformed_no_seacan.jpg', iconSize: [32,32] }),
-    cold_formed_seacan:     L.icon({ iconUrl: 'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/coldformed_seacan.png', iconSize: [32,32] }),
-    i_beam_no_seacan:       L.icon({ iconUrl: 'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/ibeam_no_seacan.jpg', iconSize: [32,32] }),
-    i_beam_seacan:          L.icon({ iconUrl: 'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/ibeam_seacan.png', iconSize: [32,32] }),
-    default:                L.icon({ iconUrl: 'https://unpkg.com/leaflet/dist/images/marker-icon.png', iconSize: [32,32] })
-  };
+const icons = {
+  quonset_no_seacan:      L.icon({ iconUrl:'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/quonset_no_seacan.jpg', iconSize:[32,32] }),
+  quonset_seacan:         L.icon({ iconUrl:'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/quonset_seacan.jpg', iconSize:[32,32] }),
+  cold_formed_no_seacan:  L.icon({ iconUrl:'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/coldformed_no_seacan.jpg', iconSize:[32,32] }),
+  cold_formed_seacan:     L.icon({ iconUrl:'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/coldformed_seacan.png', iconSize:[32,32] }),
+  i_beam_no_seacan:       L.icon({ iconUrl:'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/ibeam_no_seacan.jpg', iconSize:[32,32] }),
+  i_beam_seacan:          L.icon({ iconUrl:'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/ibeam_seacan.png', iconSize:[32,32] }),
+  default:                L.icon({ iconUrl:'https://unpkg.com/leaflet/dist/images/marker-icon.png', iconSize:[32,32] })
+};
 
-  function pickIcon(buildingType, seaCanValue) {
-    const t = (buildingType || "").toLowerCase().replace(/[\s\-]+/g, "_");
-    const sea = (seaCanValue || "").trim().toLowerCase() === "yes" ? "seacan" : "no_seacan";
-    const key = `${t}_${sea}`;
-    return icons[key] || icons.default;
+function pickIcon(buildingType, seaCan) {
+  const t = (buildingType||"").toLowerCase().replace(/[\s\-]+/g,"_");
+  const sea = (seaCan||"").trim().toLowerCase()==="yes"?"seacan":"no_seacan";
+  const key = `${t}_${sea}`;
+  return icons[key]||icons.default;
+}
+
+function updatePanel(city, prov, buildings) {
+  const list = document.getElementById('buildingList');
+  list.innerHTML = `<i>Buildings in ${city}, ${prov}</i><br><br>`;
+  buildings.forEach(b => {
+    list.innerHTML += `
+      <div class="buildingItem">
+        <b>${b.type}</b><br>
+        Description: ${b.description||"(no description)"}<br>
+        SeaCan: ${b.seaCan||"No"}
+      </div>`;
+  });
+}
+
+let allMarkers = [];
+let currentFilter = "All";
+
+fetch("https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/buildings.geojson")
+.then(res => res.json())
+.then(data => {
+
+  data.features.forEach(f => {
+    const props = f.properties;
+    const coords = f.geometry.coordinates;
+    const buildings = props.buildings||[];
+
+    // pick icon
+    let chosen = null;
+    for (let b of buildings) {
+      if ((b.seaCan||"").trim().toLowerCase()==="yes") { chosen = b; break; }
+    }
+    if (!chosen && buildings.length>0) chosen = buildings[0];
+
+    const marker = L.marker([coords[1],coords[0]], {
+      icon: pickIcon(chosen?.type, chosen?.seaCan)
+    }).addTo(map);
+
+    marker.data = { city: props.city.toLowerCase(), prov: props.province.toLowerCase(), buildings: buildings };
+    
+    marker.on('click', () => updatePanel(props.city, props.province, buildings));
+
+    allMarkers.push(marker);
+  });
+
+})
+.catch(err => console.error(err));
+
+
+// FILTER BUTTONS
+document.querySelectorAll('.filterSection button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    currentFilter = btn.getAttribute('data-filter');
+    document.querySelectorAll('.filterSection button').forEach(b=>b.classList.remove('selected'));
+    btn.classList.add('selected');
+    applyFilters();
+  });
+});
+
+function markerMatches(marker) {
+  if (currentFilter === "All") return true;
+  if (currentFilter === "Seacan") {
+    return marker.data.buildings.some(b => (b.seaCan||"").trim().toLowerCase()==="yes");
   }
+  return marker.data.buildings.some(b => b.type === currentFilter);
+}
 
-  function updatePanelWithBuildings(city, prov, buildings) {
-    const buildingList = document.getElementById("buildingList");
-    buildingList.innerHTML = `<i>Buildings in ${city}, ${prov}</i><br><br>`;
+function applyFilters() {
+  allMarkers.forEach(m => {
+    if (markerMatches(m)) m.addTo(map);
+    else map.removeLayer(m);
+  });
+  document.getElementById('buildingList').innerHTML = "<i>Select a location or search</i>";
+}
 
-    buildings.forEach(b => {
-      buildingList.innerHTML += `
-        <div class="buildingItem">
-          <b>${b.type}</b><br>
-          Description: ${b.description || "(no description)"}<br>
-          SeaCan: ${b.seaCan || "No"}<br>
-        </div>
-      `;
-    });
+// SEARCH
+document.getElementById('searchBtn').addEventListener('click', () => {
+  const city = document.getElementById('cityInput').value.trim().toLowerCase();
+  const prov = document.getElementById('provInput').value.trim().toLowerCase();
+  if (!city || !prov) return;
+
+  const matched = [];
+  allMarkers.forEach(m => {
+    map.removeLayer(m);
+    if (m.data.city===city && m.data.prov===prov && markerMatches(m)) {
+      matched.push(m);
+      m.addTo(map);
+    }
+  });
+
+  if (matched.length) {
+    const group = L.featureGroup(matched);
+    map.fitBounds(group.getBounds().pad(0.3));
+    updatePanel(city, prov, matched[0].data.buildings);
+  } else {
+    document.getElementById('buildingList').innerHTML = "<i>No data found</i>";
   }
+});
 
-  const geojsonURL = "https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/buildings.geojson";
-  let allMarkers = [];
-  let filteredType = "All";
-
-  fetch(geojsonURL)
-    .then(res => res.json())
-    .then(data => {
-
-      data.features.forEach(f => {
-        const props = f.properties;
-        const coords = f.geometry.coordinates;
-        const buildings = props.buildings || [];
-
-        let chosenBuilding = null;
-        for (let b of buildings) {
-          if ((b.seaCan || "").trim().toLowerCase() === "yes") {
-            chosenBuilding = b;
-            break;
-          }
-        }
-        if (!chosenBuilding && buildings.length > 0) {
-          const priority = ["Quonset","I_Beam","Cold_Formed"];
-          for (let type of priority) {
-            const found = buildings.find(b => b.type === type);
-            if (found) {
-              chosenBuilding = found;
-              break;
-            }
-          }
-          if (!chosenBuilding) chosenBuilding = buildings[0];
-        }
-
-        const markerIcon = chosenBuilding
-          ? pickIcon(chosenBuilding.type, chosenBuilding.seaCan)
-          : icons.default;
-
-        const marker = L.marker([coords[1], coords[0]], { icon: markerIcon });
-
-        marker.buildingData = {
-          city: props.city.toLowerCase(),
-          province: props.province.toLowerCase(),
-          buildings: buildings
-        };
-
-        marker.addTo(map).on('click', function() {
-          updatePanelWithBuildings(props.city, props.province, buildings);
-        });
-
-        allMarkers.push(marker);
-      });
-
-      setupFilters();
-      setupSearch();
-    })
-    .catch(err => console.error("Error loading GeoJSON:", err));
-
-  // FILTER HANDLER
-  function setupFilters() {
-    document.querySelectorAll('.filterSection button').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const type = btn.getAttribute('data-filter');
-        filteredType = type;
-        document.querySelectorAll('.filterSection button').forEach(b => b.classList.remove('selected'));
-        btn.classList.add('selected');
-        applyFilters();
-      });
-    });
-  }
-
-  function markerMatchesType(marker) {
-    if (filteredType === "All") return true;
-
-    const buildings = marker.buildingData.buildings;
-    return buildings.some(b => 
-      (filteredType === "Seacan" ?
-        ((b.seaCan || "").trim().toLowerCase() === "yes") :
-        (b.type === filteredType)
-    ));
-  }
-
-  function applyFilters() {
-    allMarkers.forEach(m => {
-      if (markerMatchesType(m)) {
-        m.addTo(map);
-      } else {
-        map.removeLayer(m);
-      }
-    });
-  }
-
-  // SEARCH HANDLER
-  function setupSearch() {
-    const cityInput = document.getElementById("cityInput");
-    const provInput = document.getElementById("provInput");
-    const searchBtn = document.getElementById("searchBtn");
-
-    searchBtn.addEventListener("click", () => {
-      const city = cityInput.value.trim().toLowerCase();
-      const prov = provInput.value.trim().toLowerCase();
-
-      if (!city && !prov) {
-        alert("Please enter City and Province");
-        return;
-      }
-
-      let matchedMarkers = [];
-
-      allMarkers.forEach(m => map.removeLayer(m));
-
-      allMarkers.forEach(m => {
-        if (m.buildingData.city === city && m.buildingData.province === prov) {
-          if (markerMatchesType(m)) {
-            matchedMarkers.push(m);
-          }
-        }
-      });
-
-      if (matchedMarkers.length > 0) {
-        const bounds = L.featureGroup(matchedMarkers);
-        map.fitBounds(bounds.getBounds().pad(0.4));
-        updatePanelWithBuildings(city, prov, matchedMarkers[0].buildingData.buildings);
-      }
-    });
-  }
+// RESET
+document.getElementById('resetBtn').addEventListener('click', () => {
+  currentFilter="All";
+  document.querySelectorAll('.filterSection button').forEach(b=>b.classList.remove('selected'));
+  document.querySelector('.filterSection button[data-filter="All"]').classList.add('selected');
+  allMarkers.forEach(m => m.addTo(map));
+  document.getElementById('buildingList').innerHTML = "<i>No search yet.</i>";
+  map.setView([45.9, -82.47], 7);
+});
 
 </script>
 
