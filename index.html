@@ -19,19 +19,20 @@
       left: 0;
       top: 0;
       bottom: 0;
-      width: 70%;
+      width: 70%; /* ensure sidebar is not overlapped */
     }
 
     #sidebar {
       position: absolute;
-      top: 0;
       right: 0;
-      width: 30%;
+      top: 0;
       bottom: 0;
+      width: 30%;
       overflow-y: auto;
       background: white;
       padding: 14px;
       border-left: 1px solid #ccc;
+      box-sizing: border-box;
     }
 
     #sidebar h1 {
@@ -118,7 +119,7 @@
   </div>
 
   <h3>Buildings Delivered Here</h3>
-  <div id="buildingList"><i>No search yet.</i></div>
+  <div id="buildingList"><i>Select a location or search.</i></div>
 
   <div class="footer">
     METAL PRO®<br>
@@ -160,15 +161,19 @@ function updatePanel(city, prov, buildings) {
     list.innerHTML += `
       <div class="buildingItem">
         <b>${b.type}</b><br>
-        Description: ${b.description||"(no description)"}<br>
+        Description: ${b.description||"(no desc)"}<br>
         SeaCan: ${b.seaCan||"No"}
       </div>`;
   });
 }
 
+// --------------- MARKER STORAGE ---------------
 let allMarkers = [];
 let currentFilter = "All";
+let lastSearchCity = "";
+let lastSearchProv = "";
 
+// FETCH GEOJSON
 fetch("https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/buildings.geojson")
 .then(res => res.json())
 .then(data => {
@@ -178,7 +183,7 @@ fetch("https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/bui
     const coords = f.geometry.coordinates;
     const buildings = props.buildings||[];
 
-    // pick icon
+    // pick icon based on preference
     let chosen = null;
     for (let b of buildings) {
       if ((b.seaCan||"").trim().toLowerCase()==="yes") { chosen = b; break; }
@@ -189,9 +194,16 @@ fetch("https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/bui
       icon: pickIcon(chosen?.type, chosen?.seaCan)
     }).addTo(map);
 
-    marker.data = { city: props.city.toLowerCase(), prov: props.province.toLowerCase(), buildings: buildings };
-    
-    marker.on('click', () => updatePanel(props.city, props.province, buildings));
+    // save building data
+    marker.data = {
+      city: props.city.toLowerCase(),
+      prov: props.province.toLowerCase(),
+      buildings: buildings
+    };
+
+    marker.on('click', () => {
+      updatePanel(props.city, props.province, buildings);
+    });
 
     allMarkers.push(marker);
   });
@@ -199,14 +211,14 @@ fetch("https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/bui
 })
 .catch(err => console.error(err));
 
-
-// FILTER BUTTONS
+// --------------- FILTER LOGIC ---------------
 document.querySelectorAll('.filterSection button').forEach(btn => {
   btn.addEventListener('click', () => {
     currentFilter = btn.getAttribute('data-filter');
     document.querySelectorAll('.filterSection button').forEach(b=>b.classList.remove('selected'));
     btn.classList.add('selected');
-    applyFilters();
+    applyFilters(); 
+    refreshPanel(); 
   });
 });
 
@@ -223,40 +235,63 @@ function applyFilters() {
     if (markerMatches(m)) m.addTo(map);
     else map.removeLayer(m);
   });
-  document.getElementById('buildingList').innerHTML = "<i>Select a location or search</i>";
 }
 
-// SEARCH
+// update panel after filter/search
+function refreshPanel() {
+  if (!lastSearchCity) return;
+  const matched = allMarkers.filter(m => 
+    m.data.city === lastSearchCity && 
+    m.data.prov === lastSearchProv &&
+    markerMatches(m)
+  );
+  if (matched.length>0) {
+    updatePanel(lastSearchCity, lastSearchProv, matched[0].data.buildings);
+  } else {
+    document.getElementById('buildingList').innerHTML = `<i>No data found</i>`;
+  }
+}
+
+// --------------- SEARCH LOGIC ---------------
 document.getElementById('searchBtn').addEventListener('click', () => {
   const city = document.getElementById('cityInput').value.trim().toLowerCase();
   const prov = document.getElementById('provInput').value.trim().toLowerCase();
   if (!city || !prov) return;
 
-  const matched = [];
+  lastSearchCity = city;
+  lastSearchProv = prov;
+
+  let matchedMarkers = [];
+
   allMarkers.forEach(m => {
     map.removeLayer(m);
     if (m.data.city===city && m.data.prov===prov && markerMatches(m)) {
-      matched.push(m);
+      matchedMarkers.push(m);
       m.addTo(map);
     }
   });
 
-  if (matched.length) {
-    const group = L.featureGroup(matched);
+  if (matchedMarkers.length) {
+    const group = L.featureGroup(matchedMarkers);
     map.fitBounds(group.getBounds().pad(0.3));
-    updatePanel(city, prov, matched[0].data.buildings);
+    updatePanel(city, prov, matchedMarkers[0].data.buildings);
   } else {
-    document.getElementById('buildingList').innerHTML = "<i>No data found</i>";
+    document.getElementById('buildingList').innerHTML = `<i>No buildings found</i>`;
   }
 });
 
-// RESET
+// --------------- RESET ---------------
 document.getElementById('resetBtn').addEventListener('click', () => {
-  currentFilter="All";
+  currentFilter = "All";
+  lastSearchCity = "";
+  lastSearchProv = "";
+
   document.querySelectorAll('.filterSection button').forEach(b=>b.classList.remove('selected'));
   document.querySelector('.filterSection button[data-filter="All"]').classList.add('selected');
+
   allMarkers.forEach(m => m.addTo(map));
-  document.getElementById('buildingList').innerHTML = "<i>No search yet.</i>";
+
+  document.getElementById('buildingList').innerHTML = `<i>Select a location or search.</i>`;
   map.setView([45.9, -82.47], 7);
 });
 
