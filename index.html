@@ -4,18 +4,74 @@
   <meta charset="utf-8">
   <title>Delivered Buildings Map</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
   <style>
-    html, body, #map {
+    html, body {
       height: 100%;
       width: 100%;
       margin: 0;
       padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    #map { 
+      position: absolute;
+      left: 0;
+      top: 50px;
+      bottom: 0;
+      width: 70%;
+    }
+
+    #searchBar {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 1000;
+      background: white;
+      padding: 6px 10px;
+      border-radius: 4px;
+      box-shadow: 0px 0px 6px rgba(0,0,0,0.25);
+    }
+
+    #resultsPanel {
+      position: absolute;
+      top: 50px;
+      right: 0;
+      width: 30%;
+      height: 100%;
+      background: #ffffff;
+      overflow-y: auto;
+      border-left: 1px solid #ccc;
+      padding: 10px;
+    }
+
+    #resultsPanel h3 {
+      margin-top: 0;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .buildingItem {
+      margin-bottom: 12px;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 8px;
     }
   </style>
 </head>
 <body>
 
+<div id="searchBar">
+  <input id="cityInput" type="text" placeholder="City" style="width: 120px;" />
+  <input id="provInput" type="text" placeholder="Province/State" style="width: 80px; margin-left:4px;" />
+  <button id="searchBtn">Search</button>
+</div>
+
 <div id="map"></div>
+
+<div id="resultsPanel">
+  <h3>Buildings Delivered Here</h3>
+  <div id="buildingList"><i>No search yet.</i></div>
+</div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
@@ -26,7 +82,6 @@
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
 
-  // Custom icons
   const icons = {
     quonset_no_seacan:      L.icon({ iconUrl: 'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/quonset_no_seacan.jpg', iconSize: [32,32] }),
     quonset_seacan:         L.icon({ iconUrl: 'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/quonset_seacan.jpg', iconSize: [32,32] }),
@@ -44,7 +99,23 @@
     return icons[key] || icons.default;
   }
 
+  function updatePanelWithBuildings(city, prov, buildings) {
+    const buildingList = document.getElementById("buildingList");
+    buildingList.innerHTML = `<i>Buildings in ${city}, ${prov}</i><br><br>`;
+
+    buildings.forEach(b => {
+      buildingList.innerHTML += `
+        <div class="buildingItem">
+          <b>${b.type}</b><br>
+          Description: ${b.description || "(no description)"}<br>
+          SeaCan: ${b.seaCan || "No"}<br>
+        </div>
+      `;
+    });
+  }
+
   const geojsonURL = "https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/buildings.geojson";
+  let allMarkers = [];
 
   fetch(geojsonURL)
     .then(res => res.json())
@@ -55,20 +126,15 @@
         const coords = f.geometry.coordinates;
         const buildings = props.buildings || [];
 
-        // Choose the building to represent the icon
         let chosenBuilding = null;
-
-        // 1) If any building has SeaCan = yes, pick it
         for (let b of buildings) {
           if ((b.seaCan || "").trim().toLowerCase() === "yes") {
             chosenBuilding = b;
             break;
           }
         }
-
-        // 2) If no SeaCan, pick by priority order
         if (!chosenBuilding && buildings.length > 0) {
-          const priority = ["Quonset", "I_Beam", "Cold_Formed"];
+          const priority = ["Quonset","I_Beam","Cold_Formed"];
           for (let type of priority) {
             const found = buildings.find(b => b.type === type);
             if (found) {
@@ -76,23 +142,16 @@
               break;
             }
           }
-          // fallback to first building if none match priority
-          if (!chosenBuilding) {
-            chosenBuilding = buildings[0];
-          }
+          if (!chosenBuilding) chosenBuilding = buildings[0];
         }
 
         const markerIcon = chosenBuilding
           ? pickIcon(chosenBuilding.type, chosenBuilding.seaCan)
           : icons.default;
 
-        const marker = L.marker([coords[1], coords[0]], {
-          icon: markerIcon
-        }).addTo(map);
+        const marker = L.marker([coords[1], coords[0]], { icon: markerIcon }).addTo(map);
 
-        // Build popup text
         let popupText = `<b>${props.city}, ${props.province}</b><br><br>`;
-
         buildings.forEach(b => {
           popupText += `
             <b>${b.type}</b><br>
@@ -102,11 +161,58 @@
         });
 
         marker.bindPopup(popupText);
+
+        marker.on('click', () => {
+          updatePanelWithBuildings(props.city, props.province, buildings);
+        });
+
+        allMarkers.push({
+          city: props.city.toLowerCase(),
+          province: props.province.toLowerCase(),
+          buildings: buildings,
+          marker: marker
+        });
       });
+
+      setupSearch();
 
     })
     .catch(err => console.error("Error loading GeoJSON:", err));
 
+  function setupSearch() {
+    const cityInput = document.getElementById("cityInput");
+    const provInput = document.getElementById("provInput");
+    const searchBtn = document.getElementById("searchBtn");
+
+    searchBtn.addEventListener("click", () => {
+      const city = cityInput.value.trim().toLowerCase();
+      const prov = provInput.value.trim().toLowerCase();
+
+      if (!city && !prov) {
+        alert("Please enter City and Province");
+        return;
+      }
+
+      allMarkers.forEach(obj => {
+        map.removeLayer(obj.marker);
+      });
+
+      let matched = [];
+
+      allMarkers.forEach(obj => {
+        if (obj.city === city && obj.province === prov) {
+          obj.marker.addTo(map);
+          matched.push(obj);
+        }
+      });
+
+      if (matched.length > 0) {
+        const bounds = L.featureGroup(matched.map(m => m.marker));
+        map.fitBounds(bounds.getBounds().pad(0.4));
+        updatePanelWithBuildings(matched[0].city, matched[0].province, matched[0].buildings);
+      }
+    });
+  }
 </script>
 
 </body>
