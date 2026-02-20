@@ -179,7 +179,23 @@ function pickIcon(bType, seaCan) {
 function updatePanel(city, prov, buildings) {
   const list = document.getElementById('buildingList');
   list.innerHTML = `<i>Buildings in ${city}, ${prov}</i><br><br>`;
-  buildings.forEach(b => {
+
+  // Only include buildings that match the current filter
+  const filteredList = buildings.filter(b => {
+    if (currentFilter === "All") return true;
+    if (currentFilter === "Seacan") {
+      return (b.seaCan||"").trim().toLowerCase() === "yes";
+    }
+    // match by building type
+    return b.type === currentFilter;
+  });
+
+  if (filteredList.length === 0) {
+    list.innerHTML += "<i>No buildings match the selected filter.</i>";
+    return;
+  }
+
+  filteredList.forEach(b => {
     list.innerHTML += `
       <div class="buildingItem">
         <b>${b.type}</b><br>
@@ -349,3 +365,4 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 
 </body>
 </html>
+
