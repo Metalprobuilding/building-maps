@@ -58,11 +58,17 @@
         // Array of buildings at this location
         const buildings = props.buildings || [];
 
-        // Choose an icon based on the first building
-        let chosenIcon = icons.default;
-        if (buildings.length > 0) {
-          chosenIcon = pickIcon(buildings[0].type, buildings[0].seaCan);
-        }
+        // choose SeaCan == Yes first if present
+let chosenBuilding = buildings[0];
+
+for (let b of buildings) {
+  if ((b.seaCan || "").trim().toLowerCase() === "yes") {
+    chosenBuilding = b;
+    break;
+  }
+}
+
+let chosenIcon = pickIcon(chosenBuilding.type, chosenBuilding.seaCan);
 
         const marker = L.marker([coords[1], coords[0]], {
           icon: chosenIcon
@@ -89,3 +95,4 @@
 
 </body>
 </html>
+
