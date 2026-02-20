@@ -302,7 +302,7 @@ function refreshPanel() {
   }
 }
 
-// SEARCH
+// ----------------- SEARCH -----------------
 document.getElementById('searchBtn').addEventListener('click', () => {
   const cityV = document.getElementById('cityInput').value.trim().toLowerCase();
   const provV = document.getElementById('provSelect').value.trim().toLowerCase();
@@ -312,38 +312,47 @@ document.getElementById('searchBtn').addEventListener('click', () => {
     return;
   }
 
-  // clear all markers from map
+  // remove all markers
   allMarkers.forEach(m => map.removeLayer(m));
 
+  // collect matching markers
   const matchedMarkers = [];
 
   allMarkers.forEach(m => {
-    if (m.data.city === cityV &&
-        m.data.prov === provV &&         // ✔ fixed here
-        markerMatches(m)) {
-      m.addTo(map);
+    if (
+      m.data.city === cityV &&
+      m.data.prov === provV &&
+      markerMatches(m)
+    ) {
       matchedMarkers.push(m);
+      m.addTo(map);
     }
   });
 
   if (matchedMarkers.length > 0) {
+    // zoom to matched markers
     const group = L.featureGroup(matchedMarkers);
     map.fitBounds(group.getBounds().pad(0.3));
 
-    // show buildings in sidebar
+    // combine buildings from all matched markers
+    let allBuildings = [];
+    matchedMarkers.forEach(m => {
+      allBuildings = allBuildings.concat(m.data.buildings);
+    });
+
+    // update sidebar
     updatePanel(
       capitalize(cityV),
       capitalize(provV),
-      matchedMarkers[0].data.buildings
+      allBuildings
     );
 
   } else {
     document.getElementById('buildingList').innerHTML = `<i>No buildings found</i>`;
   }
 
-  updateLegend(); // update counts after filtering
+  updateLegend(); // update legend counts
 });
-
 // ----------------- RESET -----------------
 document.getElementById('resetBtn').addEventListener('click', () => {
   currentFilter = "All";
@@ -370,5 +379,6 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 
 </body>
 </html>
+
 
 
