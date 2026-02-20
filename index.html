@@ -303,31 +303,46 @@ function refreshPanel() {
 }
 
 // SEARCH
+// ----------------- SEARCH -----------------
 document.getElementById('searchBtn').addEventListener('click', () => {
   const cityV = document.getElementById('cityInput').value.trim().toLowerCase();
-  const provV = document.getElementById('provInput').value.trim().toLowerCase();
-  if (!cityV || !provV) return;
+  const provV = document.getElementById('provSelect').value.trim().toLowerCase();
 
-  lastSearchCity = cityV;
-  lastSearchProv = provV;
+  if (!cityV || !provV) {
+    alert("Please enter both City and Province.");
+    return;
+  }
 
-  let matchedMarkers = [];
+  // clear all markers from map
+  allMarkers.forEach(m => map.removeLayer(m));
+
+  const matchedMarkers = [];
 
   allMarkers.forEach(m => {
-    map.removeLayer(m);
-    if (m.data.city === cityV && m.data.prov === provV && markerMatches(m)) {
-      matchedMarkers.push(m);
+    if (m.data.city === cityV &&
+        m.data.prov === provV &&         // ✔ fixed here
+        markerMatches(m)) {
       m.addTo(map);
+      matchedMarkers.push(m);
     }
   });
 
   if (matchedMarkers.length > 0) {
     const group = L.featureGroup(matchedMarkers);
     map.fitBounds(group.getBounds().pad(0.3));
-    updatePanel(cityV, provV, matchedMarkers[0].data.buildings);
+
+    // show buildings in sidebar
+    updatePanel(
+      capitalize(cityV),
+      capitalize(provV),
+      matchedMarkers[0].data.buildings
+    );
+
   } else {
     document.getElementById('buildingList').innerHTML = `<i>No buildings found</i>`;
   }
+
+  updateLegend(); // update counts after filtering
 });
 
 // RESET
@@ -349,3 +364,4 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 
 </body>
 </html>
+
