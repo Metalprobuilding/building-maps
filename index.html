@@ -61,16 +61,16 @@
         const coords = f.geometry.coordinates;
 
         const descText = props.description ? props.description : "(no description)";
-        const seaText  = props.seaCan    ? props.seaCan : "No";
+const seaText  = props.seaCan    ? props.seaCan : "No";
 
-        L.marker([coords[1], coords[0]], {
-          icon: pickIcon(props.type, props.seaCan)
-        })
-        .bindPopup(`
-          <b>${props.city}, ${props.province}</b><br>
-          ${descText}<br>
-          SeaCan: ${seaText}
-        `)
+L.marker([coords[1], coords[0]], {
+  icon: pickIcon(props.type, props.seaCan)
+})
+.bindPopup(`
+  <b>${props.city}, ${props.province}</b><br>
+  ${descText}<br>
+  SeaCan: ${seaText}
+`)
         .addTo(map);
       });
     })
@@ -80,3 +80,4 @@
 
 </body>
 </html>
+
