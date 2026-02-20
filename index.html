@@ -39,6 +39,7 @@
       font-size: 22px;
       margin: 0 0 4px;
     }
+
     #sidebar h2 {
       font-size: 16px;
       margin: 0 0 12px;
@@ -52,7 +53,7 @@
       padding-bottom: 4px;
     }
 
-    .searchSection input, .searchSection select, .searchSection button,
+    .searchSection input, .searchSection button,
     .filterSection button {
       padding: 6px 8px;
       margin-right: 6px;
@@ -88,15 +89,27 @@
       margin-top: 20px;
     }
 
-    .legend {
-      margin-top: 12px;
-      font-size: 14px;
+    /* Autocomplete styles */
+    #autocomplete-list {
+      border: 1px solid #ccc;
+      max-height: 120px;
+      overflow-y: auto;
+      background: white;
+      position: absolute;
+      z-index: 10000;
+      width: 140px;
     }
-    .legend img {
-      vertical-align: middle;
-      margin-right: 6px;
+
+    #autocomplete-list div {
+      padding: 6px;
+      cursor: pointer;
     }
+    #autocomplete-list div:hover {
+      background: #e9e9e9;
+    }
+
   </style>
+
 </head>
 <body>
 
@@ -107,10 +120,9 @@
   <h2>Delivered Building Tool – Search or Click on Map</h2>
 
   <div class="searchSection">
-    <input id="cityInput" type="text" placeholder="City" style="width: 120px;" />
-    <select id="provSelect" style="width: 100px;">
-      <option value="">Province/State</option>
-    </select>
+    <input id="cityInput" type="text" placeholder="City" style="width: 120px;" autocomplete="off"/>
+    <div id="autocomplete-list"></div>
+    <input id="provInput" type="text" placeholder="Province/State" style="width: 80px;" />
     <button id="searchBtn">Search</button>
     <button id="resetBtn">Reset</button>
   </div>
@@ -131,8 +143,6 @@
   <h3>Buildings Delivered Here</h3>
   <div id="buildingList"><i>Select a location or search.</i></div>
 
-  <div class="legend" id="legend"></div>
-
   <div class="footer">
     METAL PRO®<br>
     Engineered by Metal Pro Buildings Inc.<br>
@@ -146,147 +156,156 @@
 const map = L.map('map').setView([45.9, -82.47], 7);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
- attribution: '&copy; OpenStreetMap contributors'
+  attribution: '&copy; OpenStreetMap contributors'
 }).addTo(map);
 
 const icons = {
- quonset_no_seacan:      L.icon({ iconUrl:'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/quonset_no_seacan.jpg', iconSize:[32,32] }),
- quonset_seacan:         L.icon({ iconUrl:'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/quonset_seacan.jpg', iconSize:[32,32] }),
- cold_formed_no_seacan:  L.icon({ iconUrl:'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/coldformed_no_seacan.jpg', iconSize:[32,32] }),
- cold_formed_seacan:     L.icon({ iconUrl:'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/coldformed_seacan.png', iconSize:[32,32] }),
- i_beam_no_seacan:       L.icon({ iconUrl:'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/ibeam_no_seacan.jpg', iconSize:[32,32] }),
- i_beam_seacan:          L.icon({ iconUrl:'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/ibeam_seacan.png', iconSize:[32,32] }),
- default:                L.icon({ iconUrl:'https://unpkg.com/leaflet/dist/images/marker-icon.png', iconSize:[32,32] })
+  quonset_no_seacan:      L.icon({ iconUrl:'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/quonset_no_seacan.jpg', iconSize:[32,32] }),
+  quonset_seacan:         L.icon({ iconUrl:'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/quonset_seacan.jpg', iconSize:[32,32] }),
+  cold_formed_no_seacan:  L.icon({ iconUrl:'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/coldformed_no_seacan.jpg', iconSize:[32,32] }),
+  cold_formed_seacan:     L.icon({ iconUrl:'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/coldformed_seacan.png', iconSize:[32,32] }),
+  i_beam_no_seacan:       L.icon({ iconUrl:'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/ibeam_no_seacan.jpg', iconSize:[32,32] }),
+  i_beam_seacan:          L.icon({ iconUrl:'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/ibeam_seacan.png', iconSize:[32,32] }),
+  default:                L.icon({ iconUrl:'https://unpkg.com/leaflet/dist/images/marker-icon.png', iconSize:[32,32] })
 };
 
-function pickIcon(type, sea) {
- const t = (type||"").toLowerCase().replace(/[\s\-]+/g,"_");
- const s = (sea||"").trim().toLowerCase()==="yes"?"seacan":"no_seacan";
- return icons[`${t}_${s}`]||icons.default;
+function pickIcon(bType, seaCan) {
+  const t = (bType||"").toLowerCase().replace(/[\s\-]+/g,"_");
+  const sea = (seaCan||"").trim().toLowerCase()==="yes"?"seacan":"no_seacan";
+  const key = `${t}_${sea}`;
+  return icons[key]||icons.default;
 }
 
 function updatePanel(city, prov, buildings) {
- const list = document.getElementById('buildingList');
- list.innerHTML = `<i>Buildings in ${city}, ${prov}</i><br><br>`;
- buildings.forEach(b => {
-   list.innerHTML += `
-     <div class="buildingItem">
-       <b>${b.type}</b><br>
-       Description: ${b.description||"(no description)"}<br>
-       SeaCan: ${b.seaCan||"No"}
-     </div>`;
- });
- updateLegend();
+  const list = document.getElementById('buildingList');
+  list.innerHTML = `<i>Buildings in ${city}, ${prov}</i><br><br>`;
+  buildings.forEach(b => {
+    list.innerHTML += `
+      <div class="buildingItem">
+        <b>${b.type}</b><br>
+        Description: ${b.description||"(no description)"}<br>
+        SeaCan: ${b.seaCan||"No"}
+      </div>`;
+  });
 }
 
-function updateLegend() {
- const legendDiv = document.getElementById('legend');
- const counts = { quonset:0, cold_formed:0, i_beam:0, seacan:0 };
- allMarkers.forEach(m => {
-   if (map.hasLayer(m)) {
-     m.data.buildings.forEach(b => {
-       const t = b.type.toLowerCase();
-       if (t.includes("quonset")) counts.quonset++;
-       if (t.includes("cold_formed")) counts.cold_formed++;
-       if (t.includes("i_beam")) counts.i_beam++;
-       if ((b.seaCan||"").trim().toLowerCase()==="yes") counts.seacan++;
-     });
-   }
- });
- legendDiv.innerHTML = `
-   <b>Legend (visible on map)</b><br>
-   <img src="https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/quonset_no_seacan.jpg" width="20"> Quonset: ${counts.quonset}<br>
-   <img src="https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/coldformed_no_seacan.jpg" width="20"> Cold Formed: ${counts.cold_formed}<br>
-   <img src="https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/ibeam_no_seacan.jpg" width="20"> I-Beam: ${counts.i_beam}<br>
-   ⭐ SeaCan (Yes): ${counts.seacan}
- `;
-}
-
-// data storage
+// STORAGE
 let allMarkers = [];
-let cityToProv = {};
+let allCities = new Set();
 let currentFilter = "All";
+let lastSearchCity = "";
+let lastSearchProv = "";
 
-// fetch geojson
+// FETCH & POPULATE
 fetch("https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/buildings.geojson")
 .then(res => res.json())
 .then(data => {
- data.features.forEach(f => {
-   const props = f.properties;
-   const cityLower = props.city.toLowerCase();
-   const provLower = props.province.toLowerCase();
 
-   // map city→province for dropdown
-   cityToProv[cityLower] = cityToProv[cityLower] || new Set();
-   cityToProv[cityLower].add(props.province);
+  data.features.forEach(f => {
+    const props = f.properties;
+    const coords = f.geometry.coordinates;
+    const buildings = props.buildings||[];
 
-   const coords = f.geometry.coordinates;
-   const buildings = props.buildings || [];
+    // save city for autocomplete
+    allCities.add(props.city);
 
-   // choose marker icon
-   let chosen = null;
-   for (let b of buildings) {
-     if ((b.seaCan||"").trim().toLowerCase()==="yes") { chosen = b; break; }
-   }
-   if (!chosen && buildings.length>0) chosen = buildings[0];
+    // pick icon
+    let chosen = null;
+    for (let b of buildings) {
+      if ((b.seaCan||"").trim().toLowerCase()==="yes") { chosen = b; break; }
+    }
+    if (!chosen && buildings.length>0) chosen = buildings[0];
 
-   const marker = L.marker([coords[1],coords[0]], { icon: pickIcon(chosen?.type, chosen?.seaCan) });
-   marker.data = { city: cityLower, prov: provLower, buildings: buildings };
+    const marker = L.marker([coords[1], coords[0]], { icon: pickIcon(chosen?.type, chosen?.seaCan) });
 
-   marker.on('click', () => updatePanel(props.city, props.province, buildings));
+    marker.data = {
+      city: props.city.toLowerCase(),
+      prov: props.province.toLowerCase(),
+      buildings: buildings
+    };
 
-   marker.addTo(map);
-   allMarkers.push(marker);
- });
+    marker.on('click', () => {
+      updatePanel(props.city, props.province, buildings);
+    });
 
+    marker.addTo(map);
+    allMarkers.push(marker);
+  });
+
+  setupAutocomplete();
 })
 .catch(err => console.error(err));
 
-// populate province dropdown after city select
-document.getElementById('cityInput').addEventListener('change', function() {
- const val = this.value.trim().toLowerCase();
- const select = document.getElementById('provSelect');
- select.innerHTML = '<option value="">Province/State</option>';
- if (cityToProv[val]) {
-   [...cityToProv[val]].forEach(p => {
-     const opt = document.createElement('option');
-     opt.value = p.toLowerCase();
-     opt.textContent = p;
-     select.appendChild(opt);
-   });
- }
-});
 
-// filter buttons
+// ------------------ AUTOCOMPLETE ------------------
+function setupAutocomplete() {
+  const cityInput = document.getElementById("cityInput");
+  const autocompleteDiv = document.getElementById("autocomplete-list");
+
+  cityInput.addEventListener("input", function() {
+    const val = this.value.trim().toLowerCase();
+    autocompleteDiv.innerHTML = "";
+
+    if (!val) return;
+
+    allCities.forEach(city => {
+      if (city.toLowerCase().startsWith(val)) {
+        const suggestion = document.createElement("div");
+        suggestion.innerText = city;
+        suggestion.addEventListener("click", () => {
+          cityInput.value = city;
+          autocompleteDiv.innerHTML = "";
+        });
+        autocompleteDiv.appendChild(suggestion);
+      }
+    });
+  });
+}
+
+// FILTER LOGIC
 document.querySelectorAll('.filterSection button').forEach(btn => {
- btn.addEventListener('click', () => {
-   currentFilter = btn.getAttribute('data-filter');
-   document.querySelectorAll('.filterSection button').forEach(b=>b.classList.remove('selected'));
-   btn.classList.add('selected');
-   applyFilters();
-   updateLegend();
- });
+  btn.addEventListener('click', () => {
+    currentFilter = btn.getAttribute('data-filter');
+    document.querySelectorAll('.filterSection button').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    applyFilters();
+    refreshPanel();
+  });
 });
 
-function markerMatches(m) {
- if (currentFilter==="All") return true;
- if (currentFilter==="Seacan") {
-   return m.data.buildings.some(b => (b.seaCan||"").trim().toLowerCase()==="yes");
- }
- return m.data.buildings.some(b => b.type===currentFilter);
+function markerMatches(marker) {
+  if (currentFilter === "All") return true;
+  if (currentFilter === "Seacan") {
+    return marker.data.buildings.some(b => (b.seaCan||"").trim().toLowerCase()==="yes");
+  }
+  return marker.data.buildings.some(b => b.type === currentFilter);
 }
 
 function applyFilters() {
- allMarkers.forEach(m => {
-   if (markerMatches(m)) map.addLayer(m);
-   else map.removeLayer(m);
- });
+  allMarkers.forEach(m => {
+    if (markerMatches(m)) m.addTo(map);
+    else map.removeLayer(m);
+  });
 }
 
-// ----------------- SEARCH -----------------
+function refreshPanel() {
+  if (!lastSearchCity) return;
+  const matched = allMarkers.filter(m =>
+    m.data.city === lastSearchCity &&
+    m.data.prov === lastSearchProv &&
+    markerMatches(m)
+  );
+  if (matched.length > 0) {
+    updatePanel(lastSearchCity, lastSearchProv, matched[0].data.buildings);
+  } else {
+    document.getElementById('buildingList').innerHTML = `<i>No data found</i>`;
+  }
+}
+
+// SEARCH
 document.getElementById('searchBtn').addEventListener('click', () => {
   const cityV = document.getElementById('cityInput').value.trim().toLowerCase();
-  const provV = document.getElementById('provSelect').value.trim().toLowerCase();
+  const provV = document.getElementById('provInput').value.trim().toLowerCase();
   if (!cityV || !provV) return;
 
   lastSearchCity = cityV;
@@ -296,10 +315,7 @@ document.getElementById('searchBtn').addEventListener('click', () => {
 
   allMarkers.forEach(m => {
     map.removeLayer(m);
-
-    if (m.data.city === cityV 
-        && m.data.prov === provV   // 👈 FIXED HERE (used to be prof)
-        && markerMatches(m)) {
+    if (m.data.city === cityV && m.data.prov === provV && markerMatches(m)) {
       matchedMarkers.push(m);
       m.addTo(map);
     }
@@ -308,51 +324,28 @@ document.getElementById('searchBtn').addEventListener('click', () => {
   if (matchedMarkers.length > 0) {
     const group = L.featureGroup(matchedMarkers);
     map.fitBounds(group.getBounds().pad(0.3));
-
-    // update sidebar to show filtered buildings
-    updatePanel(
-      capitalize(cityV),
-      capitalize(provV),
-      matchedMarkers[0].data.buildings
-    );
-
+    updatePanel(cityV, provV, matchedMarkers[0].data.buildings);
   } else {
     document.getElementById('buildingList').innerHTML = `<i>No buildings found</i>`;
   }
-
-  // update legend now that map layers changed
-  updateLegend();
 });
 
-
-// ----------------- RESET -----------------
+// RESET
 document.getElementById('resetBtn').addEventListener('click', () => {
   currentFilter = "All";
-  
-  // Clear search inputs
-  document.getElementById('cityInput').value = "";
-  const pSel = document.getElementById('provSelect');
-  pSel.innerHTML = '<option value="">Province/State</option>';
+  lastSearchCity = "";
+  lastSearchProv = "";
 
-  // Reset filter buttons
-  document.querySelectorAll('.filterSection button').forEach(b=>b.classList.remove('selected'));
+  document.querySelectorAll('.filterSection button').forEach(b => b.classList.remove('selected'));
   document.querySelector('.filterSection button[data-filter="All"]').classList.add('selected');
 
-  // Show all markers
   allMarkers.forEach(m => m.addTo(map));
 
-  // Reset sidebar
   document.getElementById('buildingList').innerHTML = `<i>Select a location or search.</i>`;
-
-  // Reset map view
   map.setView([45.9, -82.47], 7);
-
-  // Update legend
-  updateLegend();
 });
 
 </script>
 
 </body>
 </html>
-
