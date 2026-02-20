@@ -17,38 +17,64 @@
     #map { 
       position: absolute;
       left: 0;
-      top: 50px;
-      bottom: 0;
+      top: 130px;
+      bottom: 40px;
       width: 70%;
-    }
-
-    #searchBar {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      z-index: 1000;
-      background: white;
-      padding: 6px 10px;
-      border-radius: 4px;
-      box-shadow: 0px 0px 6px rgba(0,0,0,0.25);
     }
 
     #resultsPanel {
       position: absolute;
-      top: 50px;
+      top: 0;
       right: 0;
       width: 30%;
       height: 100%;
       background: #ffffff;
       overflow-y: auto;
       border-left: 1px solid #ccc;
-      padding: 10px;
+      padding: 12px;
+    }
+
+    #resultsPanel h1 {
+      font-size: 22px;
+      margin: 4px 0 2px;
+    }
+
+    #resultsPanel h2 {
+      font-size: 16px;
+      margin: 0 0 8px;
+      color: #333;
+      font-weight: normal;
     }
 
     #resultsPanel h3 {
-      margin-top: 0;
+      margin-top: 10px;
       font-size: 18px;
-      font-weight: 600;
+      font-weight: bold;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 4px;
+    }
+
+    .searchSection input, .searchSection button,
+    .filterSection button {
+      margin-right: 5px;
+      margin-bottom: 6px;
+      padding: 6px 8px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .filterSection button.selected {
+      background: #007bff;
+      color: #fff;
+    }
+
+    .disclaimer {
+      font-size: 13px;
+      color: #444;
+      margin: 6px 0 10px;
+      background: #f8f8f8;
+      padding: 8px;
+      border-left: 4px solid #007bff;
     }
 
     .buildingItem {
@@ -56,22 +82,54 @@
       border-bottom: 1px solid #ddd;
       padding-bottom: 8px;
     }
+
+    .footer {
+      margin-top: 20px;
+      font-size: 12px;
+      color: #555;
+      border-top: 1px solid #ccc;
+      padding-top: 10px;
+    }
   </style>
 </head>
 <body>
 
-<div id="searchBar">
-  <input id="cityInput" type="text" placeholder="City" style="width: 120px;" />
-  <input id="provInput" type="text" placeholder="Province/State" style="width: 80px; margin-left:4px;" />
-  <button id="searchBtn">Search</button>
+<div id="resultsPanel">
+
+  <h1>METAL PRO BUILDINGS</h1>
+  <h2>Delivered Building Tool – Search or Click on Map</h2>
+
+  <div class="searchSection">
+    <input id="cityInput" type="text" placeholder="City" style="width: 120px;" />
+    <input id="provInput" type="text" placeholder="Province/State" style="width: 80px;" />
+    <button id="searchBtn">Search</button>
+  </div>
+
+  <div class="filterSection">
+    <strong>Filter:</strong><br>
+    <button data-filter="Quonset">Quonset</button>
+    <button data-filter="Cold_Formed">Cold Formed</button>
+    <button data-filter="I_Beam">I-Beam</button>
+    <button data-filter="Seacan">Seacan</button>
+    <button data-filter="All">Show All</button>
+  </div>
+
+  <div class="disclaimer">
+    Disclaimer: Delivered buildings is based on site location — we have not validated whether the building is erected.
+  </div>
+
+  <h3>Buildings Delivered Here</h3>
+  <div id="buildingList"><i>No search yet.</i></div>
+
+  <div class="footer">
+    METAL PRO®<br>
+    Engineered by Metal Pro Buildings Inc.<br>
+    © METAL PRO® is a registered trademark of Metal Pro Buildings Inc.
+  </div>
+
 </div>
 
 <div id="map"></div>
-
-<div id="resultsPanel">
-  <h3>Buildings Delivered Here</h3>
-  <div id="buildingList"><i>No search yet.</i></div>
-</div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
@@ -116,6 +174,7 @@
 
   const geojsonURL = "https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/buildings.geojson";
   let allMarkers = [];
+  let filteredType = "All";
 
   fetch(geojsonURL)
     .then(res => res.json())
@@ -149,36 +208,61 @@
           ? pickIcon(chosenBuilding.type, chosenBuilding.seaCan)
           : icons.default;
 
-        const marker = L.marker([coords[1], coords[0]], { icon: markerIcon }).addTo(map);
+        const marker = L.marker([coords[1], coords[0]], { icon: markerIcon });
 
-        let popupText = `<b>${props.city}, ${props.province}</b><br><br>`;
-        buildings.forEach(b => {
-          popupText += `
-            <b>${b.type}</b><br>
-            Description: ${b.description || "(no description)"}<br>
-            SeaCan: ${b.seaCan || "No"}<br><br>
-          `;
-        });
+        marker.buildingData = {
+          city: props.city.toLowerCase(),
+          province: props.province.toLowerCase(),
+          buildings: buildings
+        };
 
-        marker.bindPopup(popupText);
-
-        marker.on('click', () => {
+        marker.addTo(map).on('click', function() {
           updatePanelWithBuildings(props.city, props.province, buildings);
         });
 
-        allMarkers.push({
-          city: props.city.toLowerCase(),
-          province: props.province.toLowerCase(),
-          buildings: buildings,
-          marker: marker
-        });
+        allMarkers.push(marker);
       });
 
+      setupFilters();
       setupSearch();
-
     })
     .catch(err => console.error("Error loading GeoJSON:", err));
 
+  // FILTER HANDLER
+  function setupFilters() {
+    document.querySelectorAll('.filterSection button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const type = btn.getAttribute('data-filter');
+        filteredType = type;
+        document.querySelectorAll('.filterSection button').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        applyFilters();
+      });
+    });
+  }
+
+  function markerMatchesType(marker) {
+    if (filteredType === "All") return true;
+
+    const buildings = marker.buildingData.buildings;
+    return buildings.some(b => 
+      (filteredType === "Seacan" ?
+        ((b.seaCan || "").trim().toLowerCase() === "yes") :
+        (b.type === filteredType)
+    ));
+  }
+
+  function applyFilters() {
+    allMarkers.forEach(m => {
+      if (markerMatchesType(m)) {
+        m.addTo(map);
+      } else {
+        map.removeLayer(m);
+      }
+    });
+  }
+
+  // SEARCH HANDLER
   function setupSearch() {
     const cityInput = document.getElementById("cityInput");
     const provInput = document.getElementById("provInput");
@@ -193,26 +277,26 @@
         return;
       }
 
-      allMarkers.forEach(obj => {
-        map.removeLayer(obj.marker);
-      });
+      let matchedMarkers = [];
 
-      let matched = [];
+      allMarkers.forEach(m => map.removeLayer(m));
 
-      allMarkers.forEach(obj => {
-        if (obj.city === city && obj.province === prov) {
-          obj.marker.addTo(map);
-          matched.push(obj);
+      allMarkers.forEach(m => {
+        if (m.buildingData.city === city && m.buildingData.province === prov) {
+          if (markerMatchesType(m)) {
+            matchedMarkers.push(m);
+          }
         }
       });
 
-      if (matched.length > 0) {
-        const bounds = L.featureGroup(matched.map(m => m.marker));
+      if (matchedMarkers.length > 0) {
+        const bounds = L.featureGroup(matchedMarkers);
         map.fitBounds(bounds.getBounds().pad(0.4));
-        updatePanelWithBuildings(matched[0].city, matched[0].province, matched[0].buildings);
+        updatePanelWithBuildings(city, prov, matchedMarkers[0].buildingData.buildings);
       }
     });
   }
+
 </script>
 
 </body>
