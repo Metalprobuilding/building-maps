@@ -283,32 +283,76 @@ function applyFilters() {
  });
 }
 
-// search
+// ----------------- SEARCH -----------------
 document.getElementById('searchBtn').addEventListener('click', () => {
- const cityV = document.getElementById('cityInput').value.trim().toLowerCase();
- const provV = document.getElementById('provSelect').value.trim().toLowerCase();
- if (!cityV || !provV) return;
+  const cityV = document.getElementById('cityInput').value.trim().toLowerCase();
+  const provV = document.getElementById('provSelect').value.trim().toLowerCase();
+  if (!cityV || !provV) return;
 
- allMarkers.forEach(m => map.removeLayer(m));
- allMarkers.forEach(m => {
-   if (m.data.city===cityV && m.data.prof===provV && markerMatches(m)) {
-     map.addLayer(m);
-   }
- });
- updateLegend();
+  lastSearchCity = cityV;
+  lastSearchProv = provV;
+
+  let matchedMarkers = [];
+
+  allMarkers.forEach(m => {
+    map.removeLayer(m);
+
+    if (m.data.city === cityV 
+        && m.data.prov === provV   // 👈 FIXED HERE (used to be prof)
+        && markerMatches(m)) {
+      matchedMarkers.push(m);
+      m.addTo(map);
+    }
+  });
+
+  if (matchedMarkers.length > 0) {
+    const group = L.featureGroup(matchedMarkers);
+    map.fitBounds(group.getBounds().pad(0.3));
+
+    // update sidebar to show filtered buildings
+    updatePanel(
+      capitalize(cityV),
+      capitalize(provV),
+      matchedMarkers[0].data.buildings
+    );
+
+  } else {
+    document.getElementById('buildingList').innerHTML = `<i>No buildings found</i>`;
+  }
+
+  // update legend now that map layers changed
+  updateLegend();
 });
 
-// reset
+
+// ----------------- RESET -----------------
 document.getElementById('resetBtn').addEventListener('click', () => {
- currentFilter="All";
- document.querySelectorAll('.filterSection button').forEach(b=>b.classList.remove('selected'));
- document.querySelector('.filterSection button[data-filter="All"]').classList.add('selected');
- allMarkers.forEach(m => m.addTo(map));
- updateLegend();
- document.getElementById('buildingList').innerHTML = '<i>Select a location or search.</i>';
+  currentFilter = "All";
+  
+  // Clear search inputs
+  document.getElementById('cityInput').value = "";
+  const pSel = document.getElementById('provSelect');
+  pSel.innerHTML = '<option value="">Province/State</option>';
+
+  // Reset filter buttons
+  document.querySelectorAll('.filterSection button').forEach(b=>b.classList.remove('selected'));
+  document.querySelector('.filterSection button[data-filter="All"]').classList.add('selected');
+
+  // Show all markers
+  allMarkers.forEach(m => m.addTo(map));
+
+  // Reset sidebar
+  document.getElementById('buildingList').innerHTML = `<i>Select a location or search.</i>`;
+
+  // Reset map view
+  map.setView([45.9, -82.47], 7);
+
+  // Update legend
+  updateLegend();
 });
 
 </script>
 
 </body>
 </html>
+
