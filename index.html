@@ -303,7 +303,6 @@ function refreshPanel() {
 }
 
 // SEARCH
-// ----------------- SEARCH -----------------
 document.getElementById('searchBtn').addEventListener('click', () => {
   const cityV = document.getElementById('cityInput').value.trim().toLowerCase();
   const provV = document.getElementById('provSelect').value.trim().toLowerCase();
@@ -345,23 +344,31 @@ document.getElementById('searchBtn').addEventListener('click', () => {
   updateLegend(); // update counts after filtering
 });
 
-// RESET
+// ----------------- RESET -----------------
 document.getElementById('resetBtn').addEventListener('click', () => {
   currentFilter = "All";
-  lastSearchCity = "";
-  lastSearchProv = "";
 
-  document.querySelectorAll('.filterSection button').forEach(b => b.classList.remove('selected'));
-  document.querySelector('.filterSection button[data-filter="All"]').classList.add('selected');
+  document.querySelectorAll('.filterSection button')
+    .forEach(b => b.classList.remove('selected'));
+  document.querySelector('.filterSection button[data-filter="All"]')
+    .classList.add('selected');
 
   allMarkers.forEach(m => m.addTo(map));
 
-  document.getElementById('buildingList').innerHTML = `<i>Select a location or search.</i>`;
+  document.getElementById('cityInput').value = "";      // ✔ clear city
+  document.getElementById('provSelect').innerHTML = `<option value="">Province/State</option>`;
+
+  document.getElementById('buildingList')
+    .innerHTML = `<i>Select a location or search.</i>`;
+
   map.setView([45.9, -82.47], 7);
+
+  updateLegend();
 });
 
 </script>
 
 </body>
 </html>
+
 
