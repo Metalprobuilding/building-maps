@@ -304,20 +304,24 @@ function refreshPanel() {
 
 // ----------------- SEARCH -----------------
 document.getElementById('searchBtn').addEventListener('click', () => {
-  const cityV = document.getElementById('cityInput').value.trim().toLowerCase();
-  const provV = document.getElementById('provSelect').value.trim().toLowerCase();
+  const cityInput = document.getElementById('cityInput').value.trim();
+  const provSelect = document.getElementById('provSelect').value.trim();
+
+  const cityV = cityInput.toLowerCase();
+  const provV = provSelect.toLowerCase();
 
   if (!cityV || !provV) {
     alert("Please enter both City and Province.");
     return;
   }
 
-  // Hide all markers first
+  // remove all markers
   allMarkers.forEach(m => map.removeLayer(m));
 
-  // Find matching markers
+  // find matching markers
   const matchedMarkers = allMarkers.filter(m =>
-    m.data.city === cityV && m.data.prov === provV
+    m.data.city.toLowerCase() === cityV &&
+    m.data.prov.toLowerCase() === provV
   );
 
   if (matchedMarkers.length === 0) {
@@ -325,21 +329,22 @@ document.getElementById('searchBtn').addEventListener('click', () => {
     return;
   }
 
-  // Add matching markers and zoom
+  // add and zoom to matched markers
   matchedMarkers.forEach(m => m.addTo(map));
   const group = L.featureGroup(matchedMarkers);
   map.fitBounds(group.getBounds().pad(0.3));
 
-  // Collect ALL buildings from those markers
+  // collect all buildings from those markers
   let allBuildings = [];
   matchedMarkers.forEach(m => {
     allBuildings = allBuildings.concat(m.data.buildings);
   });
 
-  // Update the sidebar
-  document.getElementById('buildingList').innerHTML = "";
+  // update sidebar
+  const listDiv = document.getElementById('buildingList');
+  listDiv.innerHTML = "";
   allBuildings.forEach(b => {
-    document.getElementById('buildingList').innerHTML += `
+    listDiv.innerHTML += `
       <div class="buildingItem">
         <b>${b.type}</b><br>
         Description: ${b.description || "(no description)"}<br>
@@ -348,7 +353,8 @@ document.getElementById('searchBtn').addEventListener('click', () => {
     `;
   });
 
-  updateLegend(); // update counts
+  // update legend counts
+  updateLegend();
 });
 // ----------------- RESET -----------------
 document.getElementById('resetBtn').addEventListener('click', () => {
@@ -376,6 +382,7 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 
 </body>
 </html>
+
 
 
 
