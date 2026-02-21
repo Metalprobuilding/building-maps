@@ -304,13 +304,10 @@ function refreshPanel() {
 
 // ----------------- SEARCH -----------------
 document.getElementById('searchBtn').addEventListener('click', () => {
-  const cityInput = document.getElementById('cityInput').value.trim();
-  const provSelect = document.getElementById('provSelect').value.trim();
+  const cityInput = document.getElementById('cityInput').value.trim().toLowerCase();
+  const provInput = document.getElementById('provInput').value.trim().toLowerCase();
 
-  const cityV = cityInput.toLowerCase();
-  const provV = provSelect.toLowerCase();
-
-  if (!cityV || !provV) {
+  if (!cityInput || !provInput) {
     alert("Please enter both City and Province.");
     return;
   }
@@ -320,8 +317,8 @@ document.getElementById('searchBtn').addEventListener('click', () => {
 
   // find matching markers
   const matchedMarkers = allMarkers.filter(m =>
-    m.data.city.toLowerCase() === cityV &&
-    m.data.prov.toLowerCase() === provV
+    m.data.city === cityInput &&
+    m.data.prov === provInput
   );
 
   if (matchedMarkers.length === 0) {
@@ -382,6 +379,7 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 
 </body>
 </html>
+
 
 
 
