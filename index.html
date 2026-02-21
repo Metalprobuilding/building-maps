@@ -275,10 +275,18 @@ document.querySelectorAll('.filterSection button').forEach(btn => {
 
 function markerMatches(marker) {
   if (currentFilter === "All") return true;
-  if (currentFilter === "Seacan") {
-    return marker.data.buildings.some(b => (b.seaCan||"").trim().toLowerCase()==="yes");
+
+  const filterKey = currentFilter.toLowerCase().replace(/\s+/g, "_");
+
+  if (filterKey === "seacan") {
+    return marker.data.buildings.some(b =>
+      (b.seaCan || "").trim().toLowerCase() === "yes"
+    );
   }
-  return marker.data.buildings.some(b => b.type === currentFilter);
+
+  return marker.data.buildings.some(b =>
+    (b.type || "").toLowerCase().replace(/\s+/g, "_") === filterKey
+  );
 }
 
 function applyFilters() {
@@ -379,6 +387,7 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 
 </body>
 </html>
+
 
 
 
