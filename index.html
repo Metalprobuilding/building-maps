@@ -297,17 +297,41 @@ function applyFilters() {
 }
 
 function refreshPanel() {
-  if (!lastSearchCity) return;
+  if (!lastSearchCity || !lastSearchProv) {
+    document.getElementById('buildingList').innerHTML = `<i>Select a location or search.</i>`;
+    return;
+  }
+
+  // Collect ALL markers for the current city/province that ALSO match the filter
   const matched = allMarkers.filter(m =>
     m.data.city === lastSearchCity &&
     m.data.prov === lastSearchProv &&
     markerMatches(m)
   );
-  if (matched.length > 0) {
-    updatePanel(lastSearchCity, lastSearchProv, matched[0].data.buildings);
-  } else {
-    document.getElementById('buildingList').innerHTML = `<i>No data found</i>`;
+
+  // If nothing matches after filtering
+  if (matched.length === 0) {
+    document.getElementById('buildingList').innerHTML = `<i>No buildings match the selected filter.</i>`;
+    return;
   }
+
+  // Combine ALL buildings from the matched markers
+  let allBuildings = [];
+  matched.forEach(m => {
+    allBuildings = allBuildings.concat(m.data.buildings);
+  });
+
+  // Update the sidebar list
+  const listDiv = document.getElementById('buildingList');
+  listDiv.innerHTML = `<i>Buildings in ${capitalize(lastSearchCity)}, ${capitalize(lastSearchProv)}</i><br><br>`;
+  allBuildings.forEach(b => {
+    listDiv.innerHTML += `
+      <div class="buildingItem">
+        <b>${b.type}</b><br>
+        Description: ${b.description || "(no description)"}<br>
+        SeaCan: ${b.seaCan || "No"}
+      </div>`;
+  });
 }
 
 // ----------------- SEARCH -----------------
@@ -387,6 +411,7 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 
 </body>
 </html>
+
 
 
 
