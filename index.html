@@ -312,46 +312,43 @@ document.getElementById('searchBtn').addEventListener('click', () => {
     return;
   }
 
-  // remove all markers
+  // Hide all markers first
   allMarkers.forEach(m => map.removeLayer(m));
 
-  // collect matching markers
-  const matchedMarkers = [];
+  // Find matching markers
+  const matchedMarkers = allMarkers.filter(m =>
+    m.data.city === cityV && m.data.prov === provV
+  );
 
-  allMarkers.forEach(m => {
-    if (
-      m.data.city === cityV &&
-      m.data.prov === provV &&
-      markerMatches(m)
-    ) {
-      matchedMarkers.push(m);
-      m.addTo(map);
-    }
-  });
-
-  if (matchedMarkers.length > 0) {
-    // zoom to matched markers
-    const group = L.featureGroup(matchedMarkers);
-    map.fitBounds(group.getBounds().pad(0.3));
-
-    // combine buildings from all matched markers
-    let allBuildings = [];
-    matchedMarkers.forEach(m => {
-      allBuildings = allBuildings.concat(m.data.buildings);
-    });
-
-    // update sidebar
-    updatePanel(
-      capitalize(cityV),
-      capitalize(provV),
-      allBuildings
-    );
-
-  } else {
-    document.getElementById('buildingList').innerHTML = `<i>No buildings found</i>`;
+  if (matchedMarkers.length === 0) {
+    document.getElementById('buildingList').innerHTML = `<i>No buildings found.</i>`;
+    return;
   }
 
-  updateLegend(); // update legend counts
+  // Add matching markers and zoom
+  matchedMarkers.forEach(m => m.addTo(map));
+  const group = L.featureGroup(matchedMarkers);
+  map.fitBounds(group.getBounds().pad(0.3));
+
+  // Collect ALL buildings from those markers
+  let allBuildings = [];
+  matchedMarkers.forEach(m => {
+    allBuildings = allBuildings.concat(m.data.buildings);
+  });
+
+  // Update the sidebar
+  document.getElementById('buildingList').innerHTML = "";
+  allBuildings.forEach(b => {
+    document.getElementById('buildingList').innerHTML += `
+      <div class="buildingItem">
+        <b>${b.type}</b><br>
+        Description: ${b.description || "(no description)"}<br>
+        SeaCan: ${b.seaCan || "No"}
+      </div>
+    `;
+  });
+
+  updateLegend(); // update counts
 });
 // ----------------- RESET -----------------
 document.getElementById('resetBtn').addEventListener('click', () => {
@@ -379,6 +376,7 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 
 </body>
 </html>
+
 
 
 
