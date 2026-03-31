@@ -212,7 +212,7 @@ let allMarkers = [];
 let allCities = new Set();
 
 // load geojson
-fetch("https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/buildings.geojson")
+fetch("buildings.geojson?v=" + Date.now())
 .then(res => res.json())
 .then(data => {
   data.features.forEach(f => {
@@ -224,7 +224,10 @@ fetch("https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/bui
 
     let chosen = null;
     for (let b of buildings) {
-      if ((b.seaCan || "").trim().toLowerCase()==="yes") { chosen = b; break; }
+      if ((b.seaCan || "").trim().toLowerCase() === "yes") { 
+        chosen = b; 
+        break; 
+      }
     }
     if (!chosen && buildings.length > 0) chosen = buildings[0];
 
@@ -241,6 +244,7 @@ fetch("https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/bui
     marker.addTo(map);
     allMarkers.push(marker);
   });
+});
 
   setupAutocomplete();
   updateLegend(); // initial legend for all markers
