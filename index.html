@@ -149,6 +149,20 @@
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
+  function normalizeText(value) {
+    return String(value || "")
+      .replace(/[‐-‒–—]/g, "-")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+  }
+
+  function displayCity(value) {
+    return String(value || "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
   const map = L.map("map");
 
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -162,7 +176,11 @@
     cold_formed_seacan:    L.icon({ iconUrl: "icons/coldformed_seacan.png", iconSize: [32, 32] }),
     i_beam_no_seacan:      L.icon({ iconUrl: "icons/ibeam_no_seacan.jpg", iconSize: [32, 32] }),
     i_beam_seacan:         L.icon({ iconUrl: "icons/ibeam_seacan.png", iconSize: [32, 32] }),
-    default:               L.icon({ iconUrl: "https://unpkg.com/leaflet/dist/images/marker-icon.png", iconSize: [25, 41], iconAnchor: [12, 41] })
+    default:               L.icon({
+      iconUrl: "https://unpkg.com/leaflet/dist/images/marker-icon.png",
+      iconSize: [25, 41],
+      iconAnchor: [12, 41]
+    })
   };
 
   function pickIcon(type, seaCan) {
@@ -173,7 +191,7 @@
 
   function updatePanel(city, prov, buildings) {
     const list = document.getElementById("buildingList");
-    list.innerHTML = `<i>Buildings in ${city}, ${prov}</i><br><br>`;
+    list.innerHTML = `<i>Buildings in ${displayCity(city)}, ${String(prov || "").trim()}</i><br><br>`;
 
     if (!buildings || buildings.length === 0) {
       list.innerHTML += `<div class="buildingItem">(No buildings found)</div>`;
@@ -237,7 +255,10 @@
         if (!coords || coords.length < 2) return;
         if (typeof coords[0] !== "number" || typeof coords[1] !== "number") return;
 
-        allCities.add(props.city || "");
+        const cityRaw = displayCity(props.city);
+        const provRaw = String(props.province || "").trim();
+
+        allCities.add(cityRaw);
 
         let chosen = null;
         for (const b of buildings) {
@@ -254,13 +275,15 @@
         );
 
         marker.data = {
-          city: String(props.city || "").toLowerCase(),
-          prov: String(props.province || "").toLowerCase(),
+          city: normalizeText(cityRaw),
+          prov: normalizeText(provRaw),
+          cityRaw: cityRaw,
+          provRaw: provRaw,
           buildings: buildings
         };
 
         marker.on("click", () => {
-          updatePanel(props.city || "", props.province || "", buildings);
+          updatePanel(cityRaw, provRaw, buildings);
         });
 
         marker.addTo(map);
@@ -289,12 +312,12 @@
     const listDiv = document.getElementById("autocomplete-list");
 
     cityInput.addEventListener("input", function() {
-      const val = this.value.trim().toLowerCase();
+      const val = normalizeText(this.value);
       listDiv.innerHTML = "";
       if (!val) return;
 
       allCities.forEach(city => {
-        if (String(city).toLowerCase().startsWith(val)) {
+        if (normalizeText(city).startsWith(val)) {
           const suggestion = document.createElement("div");
           suggestion.innerText = city;
           suggestion.addEventListener("click", () => {
@@ -314,8 +337,8 @@
   }
 
   document.getElementById("searchBtn").addEventListener("click", () => {
-    const cityInput = document.getElementById("cityInput").value.trim().toLowerCase();
-    const provInput = document.getElementById("provInput").value.trim().toLowerCase();
+    const cityInput = normalizeText(document.getElementById("cityInput").value);
+    const provInput = normalizeText(document.getElementById("provInput").value);
 
     if (!cityInput || !provInput) {
       alert("Please enter both City and Province.");
@@ -344,12 +367,7 @@
       allBuildings = allBuildings.concat(m.data.buildings || []);
     });
 
-    updatePanel(
-      cityInput.charAt(0).toUpperCase() + cityInput.slice(1),
-      provInput.toUpperCase(),
-      allBuildings
-    );
-
+    updatePanel(matches[0].data.cityRaw, matches[0].data.provRaw, allBuildings);
     updateLegend();
   });
 
