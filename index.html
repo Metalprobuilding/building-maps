@@ -85,10 +85,12 @@
       z-index: 10000;
       width: 140px;
     }
+
     #autocomplete-list div {
       padding: 6px;
       cursor: pointer;
     }
+
     #autocomplete-list div:hover {
       background: #e9e9e9;
     }
@@ -99,13 +101,13 @@
       padding-top: 8px;
       font-size: 14px;
     }
+
     #legend img {
       width: 20px;
       margin-right: 6px;
       vertical-align: middle;
     }
   </style>
-
 </head>
 <body>
 
@@ -141,7 +143,6 @@
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
-
 const map = L.map('map').setView([45.9, -82.47], 7);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -150,28 +151,29 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 // Icons
 const icons = {
-  quonset_no_seacan: L.icon({ iconUrl:'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/quonset_no_seacan.jpg', iconSize:[32,32] }),
-  quonset_seacan:    L.icon({ iconUrl:'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/quonset_seacan.jpg', iconSize:[32,32] }),
-  cold_formed_no_seacan: L.icon({ iconUrl:'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/coldformed_no_seacan.jpg', iconSize:[32,32] }),
-  cold_formed_seacan:    L.icon({ iconUrl:'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/coldformed_seacan.png', iconSize:[32,32] }),
-  i_beam_no_seacan:      L.icon({ iconUrl:'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/ibeam_no_seacan.jpg', iconSize:[32,32] }),
-  i_beam_seacan:         L.icon({ iconUrl:'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/ibeam_seacan.png', iconSize:[32,32] }),
-  default:               L.icon({ iconUrl:'https://unpkg.com/leaflet/dist/images/marker-icon.png', iconSize:[32,32] })
+  quonset_no_seacan: L.icon({ iconUrl: 'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/quonset_no_seacan.jpg', iconSize: [32, 32] }),
+  quonset_seacan:    L.icon({ iconUrl: 'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/quonset_seacan.jpg', iconSize: [32, 32] }),
+  cold_formed_no_seacan: L.icon({ iconUrl: 'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/coldformed_no_seacan.jpg', iconSize: [32, 32] }),
+  cold_formed_seacan:    L.icon({ iconUrl: 'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/coldformed_seacan.png', iconSize: [32, 32] }),
+  i_beam_no_seacan:      L.icon({ iconUrl: 'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/ibeam_no_seacan.jpg', iconSize: [32, 32] }),
+  i_beam_seacan:         L.icon({ iconUrl: 'https://raw.githubusercontent.com/Metalprobuilding/building-maps/main/icons/ibeam_seacan.png', iconSize: [32, 32] }),
+  default:               L.icon({ iconUrl: 'https://unpkg.com/leaflet/dist/images/marker-icon.png', iconSize: [32, 32] })
 };
 
 function pickIcon(type, seaCan) {
-  const t = (type||"").toLowerCase().replace(/[\s\-]+/g,"_");
-  const sea = (seaCan||"").trim().toLowerCase()==="yes" ? "seacan":"no_seacan";
-  return icons[`${t}_${sea}`]||icons.default;
+  const t = (type || "").toLowerCase().replace(/[\s\-]+/g, "_");
+  const sea = (seaCan || "").trim().toLowerCase() === "yes" ? "seacan" : "no_seacan";
+  return icons[`${t}_${sea}`] || icons.default;
 }
 
 function updatePanel(city, prov, buildings) {
   const list = document.getElementById('buildingList');
   list.innerHTML = `<i>Buildings in ${city}, ${prov}</i><br><br>`;
+
   buildings.forEach(b => {
     list.innerHTML += `
       <div class="buildingItem">
-        <b>${b.type}</b><br>
+        <b>${b.type || ""}</b><br>
         Description: ${b.description || "(no description)"}<br>
         SeaCan: ${b.seaCan || "No"}
       </div>`;
@@ -189,11 +191,11 @@ function updateLegend() {
   allMarkers.forEach(m => {
     if (map.hasLayer(m)) {
       m.data.buildings.forEach(b => {
-        const t = (b.type||"").toLowerCase().replace(/\s+/g,"_");
+        const t = (b.type || "").toLowerCase().replace(/[\s\-]+/g, "_");
         if (t === "quonset") counts.quonset++;
         if (t === "cold_formed") counts.cold_formed++;
         if (t === "i_beam") counts.i_beam++;
-        if ((b.seaCan||"").trim().toLowerCase()==="yes") counts.seacan_yes++;
+        if ((b.seaCan || "").trim().toLowerCase() === "yes") counts.seacan_yes++;
       });
     }
   });
@@ -212,43 +214,55 @@ let allMarkers = [];
 let allCities = new Set();
 
 // load geojson
-fetch("buildings.geojson?v=" + Date.now())
-.then(res => res.json())
-.then(data => {
-  data.features.forEach(f => {
-    const props = f.properties;
-    const coords = f.geometry.coordinates;
-    const buildings = props.buildings || [];
+fetch("buildings.geojson?v=" + Date.now(), { cache: "no-store" })
+  .then(res => {
+    if (!res.ok) throw new Error("Failed to load GeoJSON: " + res.status);
+    return res.json();
+  })
+  .then(data => {
+    (data.features || []).forEach(f => {
+      const props = f.properties || {};
+      const coords = (f.geometry && f.geometry.coordinates) ? f.geometry.coordinates : null;
+      const buildings = props.buildings || [];
 
-    allCities.add(props.city);
+      if (!coords || coords.length < 2) return;
 
-    let chosen = null;
-    for (let b of buildings) {
-      if ((b.seaCan || "").trim().toLowerCase() === "yes") { 
-        chosen = b; 
-        break; 
+      allCities.add(props.city || "");
+
+      let chosen = null;
+      for (let b of buildings) {
+        if ((b.seaCan || "").trim().toLowerCase() === "yes") {
+          chosen = b;
+          break;
+        }
       }
-    }
-    if (!chosen && buildings.length > 0) chosen = buildings[0];
+      if (!chosen && buildings.length > 0) chosen = buildings[0];
 
-    const marker = L.marker([coords[1], coords[0]], { icon: pickIcon(chosen?.type, chosen?.seaCan) });
+      const marker = L.marker(
+        [coords[1], coords[0]],
+        { icon: pickIcon(chosen?.type, chosen?.seaCan) }
+      );
 
-    marker.data = {
-      city: props.city.toLowerCase(),
-      prov: props.province.toLowerCase(),
-      buildings: buildings
-    };
+      marker.data = {
+        city: (props.city || "").toLowerCase(),
+        prov: (props.province || "").toLowerCase(),
+        buildings: buildings
+      };
 
-    marker.on('click', () => updatePanel(props.city, props.province, buildings));
+      marker.on('click', () => updatePanel(props.city || "", props.province || "", buildings));
 
-    marker.addTo(map);
-    allMarkers.push(marker);
+      marker.addTo(map);
+      allMarkers.push(marker);
+    });
+
+    setupAutocomplete();
+    updateLegend();
+  })
+  .catch(err => {
+    console.error(err);
+    document.getElementById('buildingList').innerHTML = `<i>Failed to load map data.</i>`;
+    document.getElementById('legend').innerHTML = `<i>Failed to load legend.</i>`;
   });
-
-  setupAutocomplete();
-  updateLegend(); // initial legend for all markers
-})
-.catch(err => console.error(err));
 
 // autocomplete
 function setupAutocomplete() {
@@ -261,7 +275,7 @@ function setupAutocomplete() {
     if (!val) return;
 
     allCities.forEach(city => {
-      if (city.toLowerCase().startsWith(val)) {
+      if (String(city).toLowerCase().startsWith(val)) {
         const suggestion = document.createElement("div");
         suggestion.innerText = city;
         suggestion.addEventListener("click", () => {
@@ -304,7 +318,7 @@ document.getElementById('searchBtn').addEventListener('click', () => {
   matches.forEach(m => allBuildings = allBuildings.concat(m.data.buildings));
 
   updatePanel(
-    cityInput.charAt(0).toUpperCase()+cityInput.slice(1),
+    cityInput.charAt(0).toUpperCase() + cityInput.slice(1),
     provInput.toUpperCase(),
     allBuildings
   );
@@ -319,9 +333,9 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   document.getElementById('cityInput').value = "";
   document.getElementById('provInput').value = "";
   document.getElementById('buildingList').innerHTML = `<i>Select a location or search.</i>`;
+  document.getElementById('autocomplete-list').innerHTML = "";
   updateLegend();
 });
-
 </script>
 
 </body>
